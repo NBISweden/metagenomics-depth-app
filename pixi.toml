@@ -1,0 +1,20 @@
+[project]
+authors = ["John Sundh <john.sundh@scilifelab.se>", "Lokeshwaran Manoharan <lokeshwaran.manoharan@nbis.se>"]
+channels = ["conda-forge", "bioconda"]
+description = "Interactive app for calculating genome coverage in metagenomes"
+name = "metagenomics-depth-app"
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+version = "0.1.0"
+
+[activation]
+env = { QUARTO_PYTHON = "$CONDA_PREFIX/bin/python", QUARTO_R = "$CONDA_PREFIX/bin/R", R_LIBS_USER = "$CONDA_PREFIX/lib/R/library", R_LIBS = "$CONDA_PREFIX/lib/R/library" }
+
+[tasks]
+install_kernels = {cmd = """python -m ipykernel install --user --name=metagenomics-depth-app"""}
+
+[dependencies]
+python = "*"
+altair = "*"
+jupyterlab = "*"
+pandas = "*"
+r-base = "*"
