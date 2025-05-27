@@ -1,0 +1,18 @@
+# General files
+.DS_Store
+.Rhistory
+*.un*
+
+# Partially ignored directories
+data/*
+!data/README.md
+
+envs/*
+!envs/Dockerfile
+!envs/environment.yml
+!envs/README.md
+!envs/.dockerignore
+!envs/pixi.toml
+
+
+logs/
