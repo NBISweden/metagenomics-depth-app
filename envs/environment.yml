@@ -1,0 +1,21 @@
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+
+    # Example Python packages
+    - python 
+    - pandas
+    - altair
+    - jupyterlab
+
+    # Example R packages
+    - r-base
+    - r-tidyverse
+    - r-ggplot2
+    - r-dplyr
+    - r-shiny
+    - r-plotly
+    - r-shinythemes
+    - r-devtools
