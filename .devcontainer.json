@@ -5,19 +5,18 @@
         "extensions": [
             "streetsidesoftware.code-spell-checker", "quarto.quarto",
             "formulahendry.code-runner", "oderwat.indent-rainbow",
-            "janisdd.vscode-edit-csv", "ralfzhang.filetemplate",
+            "janisdd.vscode-edit-csv", "peakchen90.open-html-in-browser",
             "visualstudioexptteam.vscodeintellicode", "ms-toolsai.jupyter",
             "ritwickdey.liveserver", "yzhang.markdown-all-in-one",
-            "nextflow.nextflow", "peakchen90.open-html-in-browser",
             "christian-kohler.path-intellisense", "searking.preview-vscode",
             "ms-python.python", "reditorsupport.r",
-            "mechatroner.rainbow-csv", "snakemake.snakemake-lang",
-            "ban.spellright", "mikhail-arkhipov.r"
+            "mechatroner.rainbow-csv", "ban.spellright",
+            "mikhail-arkhipov.r", "posit.shiny"
             ],
         "settings": {
-            "r.rterm.linux": "/opt/conda/bin/R",
+            "r.rterm.linux": "/usr/local/bin/R",
             "quarto.usePipQuarto": false,
-            "quarto.path": "/opt/conda/bin/quarto",
+            "quarto.path": "/usr/local/bin/quarto",
             "quarto.render.renderOnSaveShiny": false,
             "quarto.render.previewType": "external",
             "terminal.integrated.inheritEnv": false,
