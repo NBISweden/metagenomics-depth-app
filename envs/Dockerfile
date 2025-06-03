@@ -34,6 +34,7 @@ RUN wget https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VE
     libopenblas-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+
 # Copy and install the Conda environment
 COPY environment.yml ./
 RUN conda config --set channel_priority strict \
@@ -42,6 +43,7 @@ RUN conda config --set channel_priority strict \
 
 # Install R packages directly
 RUN Rscript -e 'devtools::install_github("jeromefroe/circlepackeR")'
+RUN Rscript -e 'install.packages("ggpubr", repos = "http://cran.us.r-project.org", dependencies = TRUE)'
 RUN pip install argparse
 RUN /bin/bash -c "echo \"PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ '\" >> /root/.bashrc "
 

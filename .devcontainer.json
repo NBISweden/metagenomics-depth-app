@@ -1,5 +1,5 @@
 {
-    "image": "ghcr.io/nbisweden/metagen-depth-app:latest",
+    "image": "ghcr.io/nbisweden/metagen-depth-ss:latest",
     "customizations": {
         "vscode": {
         "extensions": [
