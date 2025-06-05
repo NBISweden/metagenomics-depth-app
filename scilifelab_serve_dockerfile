@@ -17,6 +17,7 @@ RUN apt-get update && \
 # Recreate the R environment using renv package
 RUN Rscript -e 'install.packages(c("shiny", "tidyverse", "ggplot2", "plotly", "dplyr", "shinythemes"))'
 RUN Rscript -e 'install.packages("ggpubr")'
+RUN Rscript -e 'install.packages("shinyhelper")'
 
 # Copy the app files (scripts, data, etc.)
 RUN rm -rf /srv/shiny-server/*

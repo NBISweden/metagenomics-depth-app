@@ -2,6 +2,8 @@
 .DS_Store
 .Rhistory
 *.un*
+test.qmd
+.vscode/*
 
 # Partially ignored directories
 data/*
