@@ -5,6 +5,7 @@ library(dplyr)
 library(shinythemes)
 library(plotly)
 library(ggpubr)
+library(shinyhelper)
 
 # r function to calculate total basepairs
 total_basepairs <- function(read_length, num_reads, paired=FALSE) {
@@ -14,24 +15,32 @@ total_basepairs <- function(read_length, num_reads, paired=FALSE) {
   return(read_length * num_reads)
 }
 
-
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   titlePanel("Metagenomics Coverage Calculator"),
-    theme = shinytheme("darkly"),
+    theme = shinytheme("cosmo"),
   sidebarLayout(
     sidebarPanel(
         radioButtons("source",
             label="Metagenome Source",
             choices=c("Human/Host" = "host",
                     "Environmental" = "env"),
-            inline=T),
+            inline=T) %>%
+            helper(type = "inline", 
+              content = c("Select the source of the metagenome.", 
+                          "If the source is a host, like human skin metagenome or ostrich gut metagenome",
+                          "If the source is environmental like soil, water or even bioreactor"),
+              title = "Source", size = "s"),
         uiOutput("source_ui"),
         radioButtons("target",
             label="Is there a target organism?",
             choices=c("Yes","No"),
-            inline=T),
+            inline=T) %>%
+            helper(type = "inline", 
+               content = c("Is there a particular organism of interest in the metagenome?",
+                          "If yes, please provide the genome size and expected relative abundance in the sample.",
+                          "If no, the calculator will assume a target organism with 3 Mbp genome size and 1% relative abundance."),
+              title = "Target Organism", size = "s"),
         uiOutput("target_ui"), 
         uiOutput("target_per_ui"),
         radioButtons("read",
@@ -41,12 +50,25 @@ ui <- fluidPage(
             inline=T),
         uiOutput("read_ui"),
         numericInput("length",
-            label="Average Read length",value=150,min=1,max=50000),
+            label="Average Read length in bp",value=150,min=1,max=50000) %>%
+            helper(type = "inline", 
+               content = c("Illumina/short-read sequencing is usually 150 bp,",
+                          "PacBio/ONT/long-read sequencing is usually 10,000 bp or more."),
+              title = "Average Read Length", size = "s"),
+        sliderInput("coverage",
+            "X coverage expected for target species",
+            min = 0,
+            max = 100,
+            value = 10) %>%
+            helper(type = "inline", 
+              content = c("This is the number of times the target genome is expected to be sequenced in the sample.",
+                          "For example, if you expect 10X coverage, it means that each base in the target genome will be sequenced on average 10 times."),
+              title = "Expected Coverage", size = "s"),
         conditionalPanel(condition = "input.target == 'No'",
                                  textOutput('coverage_text')),
         fluidRow(
           column(6,style=list("padding-right: 5px;"),
-                 actionButton("click", "Update")
+                 actionButton("click", "Run test")
           ),
           column(6,style=list("padding-left: 5px;"),
                  downloadButton('download', 'Download')
@@ -56,12 +78,17 @@ ui <- fluidPage(
     
     mainPanel(
         plotlyOutput("rarePlot"),
-        tableOutput('table')
+        fluidRow(
+                    column(width = 6, plotlyOutput("spePlot",  width="100%")),
+                    column(width = 6, tableOutput('table'))
+                )
     )
   )
 )
 # Define server logic required to draw a histogram
 server=function(input,output,session) {
+
+  observe_helpers()
 
   output$coverage_text <- renderText({
     if(input$target == "No") {
@@ -74,21 +101,32 @@ server=function(input,output,session) {
     if(input$source=="host") {
       sliderInput("contam", 
                   "Host DNA Contamination %", 
-                  value=50, min=0, max=100)
+                  value=50, min=0, max=100) %>%
+            helper(type = "inline", 
+              content = c("The amount of host DNA contamination like from human can vary widely", 
+                          "Anything between <10% (like faecal) to >90% (like skin) depending on the location in human.",
+                          'Related research on host contamination in human metagenome can be found <a href="https://www.nature.com/articles/s41564-023-01381-3">here</a>'),
+              title = "Host DNA Contamination", size = "s")
     } 
   })
   output$target_ui <- renderUI({
     if(input$target=="Yes") {
       numericInput("gen_size", 
                    "Target Genome Size in MB", 
-                   value=3, min=0, max=670000)
+                   value=3, min=0, max=670000) %>%
+            helper(type = "inline", 
+              content = "For example an average size of a bacterial genome is 3.5 MB",
+              title = "Target Genome Size", size = "s")
     } 
   })
   output$target_per_ui <- renderUI({
     if(input$target=="Yes") {
       sliderInput("gen_perc", 
                   "Target Organism Percentage in Sample %",
-                  value=1, min=0, max=100)
+                  value=1, min=0, max=100) %>%
+            helper(type = "inline", 
+               content = "If there is an expected % of the target organism in the metagenome",
+               title = "Target Organism Percentage", size = "s")
     } 
   })
   output$read_ui <- renderUI({
@@ -96,7 +134,11 @@ server=function(input,output,session) {
       radioButtons("read_type", 
                    "Read Type", 
                    choices=c("Paired-end" = "PE", "Single-end" = "SE"), 
-                   inline=T)
+                   inline=T) %>%
+            helper(type = "inline", 
+              content = c("Illumina sequencing is usually Paired-end (PE)", 
+                        "while Long-read sequencing technologies are Single-end (SE)"),
+              title = "Read Type", size = "s")
     }
   })
 
@@ -149,8 +191,10 @@ server=function(input,output,session) {
 
     if(input$read == "short") {
       seq_range <- seq(10, 100, by=10)
+      x_seq <- seq(10, 100, by=1)
     } else {
       seq_range <- seq(1, 10, by=1)
+      x_seq <- seq(1, 10, by=0.1)
     }
 
     plot_data <- data.frame(rel_abund = numeric(),
@@ -179,30 +223,93 @@ server=function(input,output,session) {
     plot_data$reads <- factor(plot_data$reads, 
                                  levels = unique(plot_data$reads))
     
-      high_contrast_12 <- c(
-      "#E69F00",  # Orange
-      "#56B4E9",  # Sky Blue
-      "#009E73",  # Bluish Green
-      "#F0E442",  # Yellow
-      "#0072B2",  # Blue
-      "#D55E00",  # Vermillion
-      "#CC79A7",  # Reddish Purple
-      "#882255",  # Dark Red
-      "#44AA99",  # Teal
-      "#117733",  # Green
-      "#332288",  # Indigo
-      "#AA4499"   # Pink
-    )
+    plot2_data <- plot_data %>%
+      filter(rel_abund == in_values$gen_perc) 
+    
+    if (min(plot2_data$coverage) > input$coverage) {
+      intersections <- plot2_data %>%
+        mutate(interpolated = min(plot2_data$coverage)) %>%
+        slice_head()
 
+      target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
+        geom_line(aes(group=1), color="#CC79A7") +
+        geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=0, yend=input$coverage), 
+                       linetype="dashed", color="darkgrey") +
+        geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=reads, yend=1), 
+                       linetype="dashed", color="darkgrey") +
+        scale_y_log10() +
+        geom_point(data=intersections, aes(x=reads, y=interpolated), 
+                   color="#CC79A7", size=3) +
+        geom_text(data=intersections, aes(x=6, y=interpolated, 
+                                          label=paste0("Target already achieved at \n", reads, " reads.")), 
+                  vjust=-1, color="black") +
+        theme_minimal() +
+        labs(x="Sequences per sample (million reads)", 
+             y="Genome coverage (X)")
+    } else if (max(plot2_data$coverage) < input$coverage) {
+      intersections <- plot2_data %>%
+        mutate(interpolated = max(plot2_data$coverage)) %>%
+        slice_tail()
+
+      target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
+        scale_y_log10() +
+        geom_line(aes(group=1), color="#CC79A7") +
+        geom_text(data=intersections, aes(x=6, y=10, 
+                                          label=paste0("Target coverage \n NOT achieved \n even at ", reads, " reads.")), 
+                  vjust=-1, color="black") +
+        theme_minimal() +
+        labs(x="Sequences per sample (million reads)", 
+             y="Genome coverage (X)")
+    } else {
+      intersections <- plot2_data %>%
+        mutate(interpolated = approx(x = reads, y = coverage, xout = reads)$y) %>%
+        slice_min(abs(interpolated - input$coverage))
+
+        target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
+          geom_line(aes(group=1), color="#CC79A7") +
+          geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=0, yend=input$coverage), 
+                         linetype="dashed", color="darkgrey") +
+          geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=reads, yend=1), 
+                         linetype="dashed", color="darkgrey") +
+          scale_y_log10() +
+          geom_point(data=intersections, aes(x=reads, y=interpolated), 
+                     color="#CC79A7", size=3) +
+          geom_text(data=intersections, aes(x=6, y=interpolated, 
+                                            label=paste0("Target Achieved at \n", reads, " reads.")),
+                                            vjust = 4, color="black") +
+          theme_minimal() +
+        labs(x="Sequences per sample (million reads)", 
+             y="Genome coverage (X)")
+    }
+      
+    
+    high_contrast_12 <- c(
+      "#FED976",  # Yellow
+      "#FEB24C",  # Yellow-orange
+      "#FD8D3C",  # Orange
+      "#FC4E2A",  # Orange-red
+      "#E31A1C",  # Red
+      "#BD0026",  # Dark red
+      "#800026",  # Very dark red
+      "#67000D",  # Darkest red
+      "#4D0009",  # Extra dark red
+      "#330006"   # Nearly black red
+    ) 
     coverage_plot <- ggplot(plot_data, aes(x=rel_abund, y=coverage, color=reads)) +
       geom_point() +
       scale_y_log10() +
-      scale_color_manual(values = high_contrast_12, name = "Reads in millions") +
+      scale_color_manual(values = high_contrast_12, name = "Sequencing depth\n   (million reads)") +
       labs(x="Species relative abundance in metagenome (%)", y="Genome coverage (X)") +
       theme_minimal()  
 
+
+
     output$rarePlot <- renderPlotly({
       ggplotly(coverage_plot)
+    })
+
+    output$spePlot <- renderPlotly({
+      ggplotly(target_plot)
     })
 
     Settings <- c(
@@ -214,9 +321,10 @@ server=function(input,output,session) {
       "Read Type" = in_values$read_type,
       "Average Read Length (bp)" = input$length
     )
+
     settings_df <- Settings %>% as.data.frame() %>%
-        rownames_to_column("Setting") 
-    colnames(settings_df) <- c("Setting", "Value")
+        rownames_to_column("Settings") 
+    colnames(settings_df) <- c("Settings", "Value")
     tab1 <- ggtexttable(settings_df, rows = NULL, 
                         theme = ttheme("mGreen"))
 
@@ -230,7 +338,7 @@ server=function(input,output,session) {
             content = function(file){
                 pdf(NULL)
                 #plot_grid(p1, p2, p3, p4, nrow = 2)
-                ggsave(file, plot=ggarrange(coverage_plot, tab1, nrow = 2), dpi = 300, width = 10, height = 8, units = "in")
+                ggsave(file, plot=ggarrange(coverage_plot, ggarrange(target_plot, tab1, nrow = 1), nrow = 2), dpi = 300, width = 10, height = 8, units = "in")
             }
         )
     
