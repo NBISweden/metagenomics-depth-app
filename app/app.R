@@ -56,13 +56,14 @@ ui <- fluidPage(
                           "PacBio/ONT/long-read sequencing is usually 10,000 bp or more."),
               title = "Average Read Length", size = "s"),
         sliderInput("coverage",
-            "X coverage expected for target species",
+            "X coverage aim for target species",
             min = 0,
             max = 100,
             value = 10) %>%
             helper(type = "inline", 
               content = c("This is the number of times the target genome is expected to be sequenced in the sample.",
-                          "For example, if you expect 10X coverage, it means that each base in the target genome will be sequenced on average 10 times."),
+                          "For example, if you expect 10X coverage, it means that each base in the target genome will be sequenced on average 10 times.",
+                          "Naturally, any organism that is more abundant in the metagenome will receive a higher coverage on average"),
               title = "Expected Coverage", size = "s"),
         conditionalPanel(condition = "input.target == 'No'",
                                  textOutput('coverage_text')),
@@ -113,7 +114,7 @@ server=function(input,output,session) {
     if(input$target=="Yes") {
       numericInput("gen_size", 
                    "Target Genome Size in MB", 
-                   value=3, min=0, max=670000) %>%
+                   value=3.5, min=0, max=670000, step=0.5) %>%
             helper(type = "inline", 
               content = "For example an average size of a bacterial genome is 3.5 MB",
               title = "Target Genome Size", size = "s")
@@ -228,19 +229,19 @@ server=function(input,output,session) {
     
     if (min(plot2_data$coverage) > input$coverage) {
       intersections <- plot2_data %>%
-        mutate(interpolated = min(plot2_data$coverage)) %>%
+        mutate(estimated_sequencing_depth = min(plot2_data$coverage)) %>%
         slice_head()
 
       target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
         geom_line(aes(group=1), color="#CC79A7") +
-        geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=0, yend=input$coverage), 
+        geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=0, yend=input$coverage), 
                        linetype="dashed", color="darkgrey") +
-        geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=reads, yend=1), 
+        geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=reads, yend=1), 
                        linetype="dashed", color="darkgrey") +
         scale_y_log10() +
-        geom_point(data=intersections, aes(x=reads, y=interpolated), 
+        geom_point(data=intersections, aes(x=reads, y=estimated_sequencing_depth), 
                    color="#CC79A7", size=3) +
-        geom_text(data=intersections, aes(x=6, y=interpolated, 
+        geom_text(data=intersections, aes(x=6, y=estimated_sequencing_depth, 
                                           label=paste0("Target already achieved at \n", reads, " reads.")), 
                   vjust=-1, color="black") +
         theme_minimal() +
@@ -248,7 +249,7 @@ server=function(input,output,session) {
              y="Genome coverage (X)")
     } else if (max(plot2_data$coverage) < input$coverage) {
       intersections <- plot2_data %>%
-        mutate(interpolated = max(plot2_data$coverage)) %>%
+        mutate(estimated_sequencing_depth = max(plot2_data$coverage)) %>%
         slice_tail()
 
       target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
@@ -262,19 +263,19 @@ server=function(input,output,session) {
              y="Genome coverage (X)")
     } else {
       intersections <- plot2_data %>%
-        mutate(interpolated = approx(x = reads, y = coverage, xout = reads)$y) %>%
-        slice_min(abs(interpolated - input$coverage))
+        mutate(estimated_sequencing_depth = approx(x = reads, y = coverage, xout = reads)$y) %>%
+        slice_min(abs(estimated_sequencing_depth - input$coverage))
 
         target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
           geom_line(aes(group=1), color="#CC79A7") +
-          geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=0, yend=input$coverage), 
+          geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=0, yend=input$coverage), 
                          linetype="dashed", color="darkgrey") +
-          geom_segment(data=intersections, aes(x=reads, y=interpolated, xend=reads, yend=1), 
+          geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=reads, yend=1), 
                          linetype="dashed", color="darkgrey") +
           scale_y_log10() +
-          geom_point(data=intersections, aes(x=reads, y=interpolated), 
+          geom_point(data=intersections, aes(x=reads, y=estimated_sequencing_depth), 
                      color="#CC79A7", size=3) +
-          geom_text(data=intersections, aes(x=6, y=interpolated, 
+          geom_text(data=intersections, aes(x=6, y=estimated_sequencing_depth, 
                                             label=paste0("Target Achieved at \n", reads, " reads.")),
                                             vjust = 4, color="black") +
           theme_minimal() +
