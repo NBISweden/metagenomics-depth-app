@@ -219,68 +219,36 @@ server=function(input,output,session) {
         plot_data[nrow(plot_data)+1,] <- c(rel, seq_m, coverage)
       }
     }
-    plot_data <- plot_data %>%
+    plot1_data <- plot_data %>%
       mutate(reads = paste0(reads / 1000000, "M"))
-    plot_data$reads <- factor(plot_data$reads, 
-                                 levels = unique(plot_data$reads))
+    plot1_data$reads <- factor(plot1_data$reads, 
+                                 levels = unique(plot1_data$reads))
     
     plot2_data <- plot_data %>%
       filter(rel_abund == in_values$gen_perc) 
     
     if (min(plot2_data$coverage) > input$coverage) {
       intersections <- plot2_data %>%
-        mutate(estimated_sequencing_depth = min(plot2_data$coverage)) %>%
+        mutate(estimated_sequencing_depth = reads, target_coverage = min(plot2_data$coverage)) %>%
         slice_head()
-
-      target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
-        geom_line(aes(group=1), color="#CC79A7") +
-        geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=0, yend=input$coverage), 
-                       linetype="dashed", color="darkgrey") +
-        geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=reads, yend=1), 
-                       linetype="dashed", color="darkgrey") +
-        scale_y_log10() +
-        geom_point(data=intersections, aes(x=reads, y=estimated_sequencing_depth), 
-                   color="#CC79A7", size=3) +
-        geom_text(data=intersections, aes(x=6, y=estimated_sequencing_depth, 
-                                          label=paste0("Target already achieved at \n", reads, " reads.")), 
-                  vjust=-1, color="black") +
-        theme_minimal() +
-        labs(x="Sequences per sample (million reads)", 
-             y="Genome coverage (X)")
+      plot2_text <- paste0("Target already achieved at \n", paste0(intersections$estimated_sequencing_depth / 1000000, "M"), " reads.")
+      
     } else if (max(plot2_data$coverage) < input$coverage) {
-      intersections <- plot2_data %>%
-        mutate(estimated_sequencing_depth = max(plot2_data$coverage)) %>%
+      intersections <-plot2_data %>%
+        mutate(estimated_sequencing_depth = reads, target_coverage = max(plot2_data$coverage)) %>%
         slice_tail()
-
-      target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
-        scale_y_log10() +
-        geom_line(aes(group=1), color="#CC79A7") +
-        geom_text(data=intersections, aes(x=6, y=10, 
-                                          label=paste0("Target coverage \n NOT achieved \n even at ", reads, " reads.")), 
-                  vjust=-1, color="black") +
-        theme_minimal() +
-        labs(x="Sequences per sample (million reads)", 
-             y="Genome coverage (X)")
+      plot2_text <- paste0("Target coverage \n NOT achieved \n even at ", paste0(intersections$estimated_sequencing_depth / 1000000, "M"), " reads.")
+      
     } else {
-      intersections <- plot2_data %>%
-        mutate(estimated_sequencing_depth = approx(x = reads, y = coverage, xout = reads)$y) %>%
+      x_seq = seq(from=min(plot2_data$reads), to=max(plot2_data$reads), length.out=101)
+      intersections <-plot2_data %>%
+        group_by(rel_abund) %>%
+        summarise(estimated_sequencing_depth = approx(x = reads, y = coverage, xout = x_seq)$y) %>%
+        mutate(x_seq = x_seq) %>%
         slice_min(abs(estimated_sequencing_depth - input$coverage))
-
-        target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
-          geom_line(aes(group=1), color="#CC79A7") +
-          geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=0, yend=input$coverage), 
-                         linetype="dashed", color="darkgrey") +
-          geom_segment(data=intersections, aes(x=reads, y=estimated_sequencing_depth, xend=reads, yend=1), 
-                         linetype="dashed", color="darkgrey") +
-          scale_y_log10() +
-          geom_point(data=intersections, aes(x=reads, y=estimated_sequencing_depth), 
-                     color="#CC79A7", size=3) +
-          geom_text(data=intersections, aes(x=6, y=estimated_sequencing_depth, 
-                                            label=paste0("Target Achieved at \n", reads, " reads.")),
-                                            vjust = 4, color="black") +
-          theme_minimal() +
-        labs(x="Sequences per sample (million reads)", 
-             y="Genome coverage (X)")
+      
+      names(intersections) <- c("rel_abund", "target_coverage", "estimated_sequencing_depth")
+      plot2_text <- paste0("Target Achieved at \n", paste0(intersections$estimated_sequencing_depth / 1000000, "M"), " reads.")
     }
       
     
@@ -296,14 +264,29 @@ server=function(input,output,session) {
       "#4D0009",  # Extra dark red
       "#330006"   # Nearly black red
     ) 
-    coverage_plot <- ggplot(plot_data, aes(x=rel_abund, y=coverage, color=reads)) +
+    coverage_plot <- ggplot(plot1_data, aes(x=rel_abund, y=coverage, color=reads)) +
       geom_point() +
       scale_y_log10() +
       scale_color_manual(values = high_contrast_12, name = "Sequencing depth\n   (million reads)") +
       labs(x="Species relative abundance in metagenome (%)", y="Genome coverage (X)") +
       theme_minimal()  
 
-
+    target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
+      geom_line(aes(group=1), color="#CC79A7") +
+      geom_segment(data=intersections, aes(x=estimated_sequencing_depth, y=target_coverage, xend=0, yend=input$coverage), 
+                     linetype="dashed", color="darkgrey") +
+      geom_segment(data=intersections, aes(x=estimated_sequencing_depth, y=target_coverage, xend=estimated_sequencing_depth, yend=1), 
+                     linetype="dashed", color="darkgrey") +
+      geom_point(data=intersections, aes(x=estimated_sequencing_depth, y=target_coverage), 
+                 color="#CC79A7", size=3) +
+      geom_text(data=intersections, aes(x=mean(plot2_data$reads)*1.5, y=mean(plot2_data$coverage)/2, label=plot2_text),
+      vjust = 4, color="black") +
+      theme_minimal() +
+      scale_y_log10() +
+      scale_x_continuous(breaks = plot2_data$reads, 
+        label = paste0(plot2_data$reads / 1000000, "M")) +
+      labs(x="Sequences per sample (million reads)", 
+             y="Genome coverage (X)")
 
     output$rarePlot <- renderPlotly({
       ggplotly(coverage_plot)
