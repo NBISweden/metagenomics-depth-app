@@ -140,7 +140,7 @@ server=function(input,output,session) {
               content = c("Illumina sequencing is usually Paired-end (PE)", 
                         "while Long-read sequencing technologies are Single-end (SE)"),
               title = "Read Type", size = "s")
-    }
+    } 
   })
 
   in_values <- reactiveValues(contam = 0, 
@@ -159,6 +159,23 @@ server=function(input,output,session) {
   })
   observeEvent(input$read_type, {
     in_values$read_type <- input$read_type
+  })
+  observeEvent(input$read, {
+    if (input$read=="long") {
+       updateNumericInput(session, "length",
+            label="Average Read length in bp",value=10000,min=1,max=50000) %>%
+            helper(type = "inline", 
+               content = c("Illumina/short-read sequencing is usually 150 bp,",
+                          "PacBio/ONT/long-read sequencing is usually 10,000 bp or more."),
+              title = "Average Read Length", size = "s")
+    } else {
+       updateNumericInput(session, "length",
+            label="Average Read length in bp",value=150,min=1,max=50000) %>%
+            helper(type = "inline", 
+               content = c("Illumina/short-read sequencing is usually 150 bp,",
+                          "PacBio/ONT/long-read sequencing is usually 10,000 bp or more."),
+              title = "Average Read Length", size = "s")
+    }
   })
   observeEvent(input$source, {
     if(input$source == "host") {
