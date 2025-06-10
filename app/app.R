@@ -93,8 +93,8 @@ server=function(input,output,session) {
 
   output$coverage_text <- renderText({
     if(input$target == "No") {
-      paste("The assumed target is precent at 1% of metagenome in the sample 
-      and its's genome size is 3 Mbp.")
+      paste("The assumed target is present at 1% of metagenome in the sample 
+      and its's genome size is 3.5 Mbp.")
     }
   })
 
@@ -144,7 +144,7 @@ server=function(input,output,session) {
   })
 
   in_values <- reactiveValues(contam = 0, 
-                              gen_size = 3, 
+                              gen_size = 3.5, 
                               gen_perc = 1, 
                               read_type = "SE")
 
