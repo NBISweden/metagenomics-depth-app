@@ -17,7 +17,12 @@ total_basepairs <- function(read_length, num_reads, paired=FALSE) {
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  titlePanel("Metagenomics Coverage Calculator"),
+  titlePanel(windowTitle = "Metagenomics Coverage Calculator",
+    title = div(h1("Metagenomics Coverage Calculator", align = "center"), 
+              HTML('<a href="https://nbis.se"><img src="nbis-scilifelab.png" 
+                    style="height:40px;float:left; margin-top: -50px"></a>'), 
+              HTML('<a href="https://github.com/NBISweden/metagenomics-depth-app"><img src="github.png"  
+                    style="height:40px;float:right; margin-top: -50px"></a>'))),
     theme = shinytheme("cosmo"),
   sidebarLayout(
     sidebarPanel(
@@ -78,7 +83,10 @@ ui <- fluidPage(
     ),
     
     mainPanel(
-        plotlyOutput("rarePlot"),
+        fluidRow(
+          column(width = 8, plotlyOutput("rarePlot", width="100%")),
+          column(width = 4, imageOutput("formulae", width = "100%"))
+        ),
         fluidRow(
                     column(width = 6, plotlyOutput("spePlot",  width="100%")),
                     column(width = 6, tableOutput('table'))
@@ -93,7 +101,7 @@ server=function(input,output,session) {
 
   output$coverage_text <- renderText({
     if(input$target == "No") {
-      paste("The assumed target is present at 1% of metagenome in the sample 
+      paste("The assumed target is present at 1% of microbiome in the sample 
       and its's genome size is 3.5 Mbp.")
     }
   })
@@ -123,10 +131,10 @@ server=function(input,output,session) {
   output$target_per_ui <- renderUI({
     if(input$target=="Yes") {
       sliderInput("gen_perc", 
-                  "Target Organism Percentage in Sample %",
+                  "Target Organism Percentage in Microbiome %",
                   value=1, min=0, max=100) %>%
             helper(type = "inline", 
-               content = "If there is an expected % of the target organism in the metagenome",
+               content = "If there is an expected % of the target organism in the microbiome",
                title = "Target Organism Percentage", size = "s")
     } 
   })
@@ -285,7 +293,7 @@ server=function(input,output,session) {
       geom_point() +
       scale_y_log10() +
       scale_color_manual(values = high_contrast_12, name = "Sequencing depth\n   (million reads)") +
-      labs(x="Species relative abundance in metagenome (%)", y="Genome coverage (X)") +
+      labs(x="Species relative abundance in microbiome (%)", y="Genome coverage (X)") +
       theme_minimal()  
 
     target_plot <- ggplot(plot2_data, aes(x=reads, y=coverage)) +
@@ -311,6 +319,14 @@ server=function(input,output,session) {
 
     output$spePlot <- renderPlotly({
       ggplotly(target_plot)
+    })
+
+    output$formulae <- renderImage({
+      image_file <- normalizePath(file.path("./www", "formulae.png"))
+      list(src = image_file,
+            width = 300,
+            height = 350,
+           contentType = 'image/png')
     })
 
     Settings <- c(
