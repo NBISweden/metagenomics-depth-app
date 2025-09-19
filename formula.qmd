@@ -1,0 +1,31 @@
+---
+format: html
+---
+
+$TB = RL * NR * 2 (if\ paired-end)$
+
+<font color='grey'>
+
+* TB: Total bases
+* RL: Read length
+* NR: No. of reads
+
+</font>
+
+$AP = RT * {{100 - HC} \over 100}$
+
+<font color='grey'>
+
+* AP: Actual % in DNA
+* RT: Relative abundance of species in microbiome (%)
+* HC: Host contamination (%)
+
+</font>
+
+$Coverage\ X= {TB \over GS} * {AP \over 100}$
+
+<font color='grey'>
+
+* GS: Genome size in bases
+
+</font>
